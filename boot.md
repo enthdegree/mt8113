@@ -33,10 +33,10 @@ Documentation on this interface is scattered and device-specific.
 At this point it is common to use this interface to send a "Download Agent"/DA from a host machine into the device's memory, and have the device jump to execute it. 
 Not enabled on the Kobo, but there is an efuse that makes the BROM authenticate the DA before jumping to execute it ("Download Agent Authentication"/DAA). 
 
-"DA" and "Download mode" can mean many things in different contexts and platforms. 
+"DA" and "Download mode" can mean a million different things depending on platform and context. 
 
- - On some devices the BROM's download mode is distinct from a download mode exposed by the preloader. 
- - On some devices there are two DA's uploaded, the first one (DA1) setting some things up before asking for a second DA (DA2).
+ - On some devices the BROM's download mode is distinct from a download mode exposed by the preloader, or some other part of boot. 
+ - On some devices the usual process is that two DA are uploaded. The first one (DA1) sets some things up before asking for a second DA (DA2). Either of those can be authenticated by whoever asked for them. 
  - Which of these are enabled and/or accessible, how to access them, what's loaded to ram before/after the DA executes, what jumps to which DA, is extremely context and platform-specific.
  - On the Kobo MT8113 we apparently only have the one Download Mode: the one that BROM runs, unsecured, before the preloader/LK is loaded into SRAM. 
 
