@@ -38,7 +38,7 @@ Not enabled on the Kobo, but there is an efuse that makes the BROM authenticate 
  - On some devices the BROM's download mode is distinct from a download mode exposed by the preloader, or some other part of boot. 
  - On some devices the usual process is that two DA are uploaded. The first one (DA1) sets some things up before asking for a second DA (DA2). Either of those can be authenticated by whoever asked for them. 
  - Which of these are enabled and/or accessible, how to access them, what's loaded to ram before/after the DA executes, what jumps to which DA, is extremely context and platform-specific.
- - On the Kobo MT8113 we apparently only have the one Download Mode: the one that BROM runs, unsecured, before the preloader/LK is loaded into SRAM. 
+ - On the Kobo MT8113 we apparently only have the one Download Mode: the one that BROM runs. It is unsecured and runs before the preloader/LK is loaded into SRAM. 
 
 ## mtkclient and Download Mode
 bkerler published an exploit called kamakiri that disables SLA and DAA checks for devices with those enabled. 
