@@ -1,9 +1,9 @@
-# Typical boot paths for the MT8113
+# Typical boot paths for the MT8113 in a Kobo Clara BW
 
-Most of the information in this document can be gleaned directly from [normalboot_921600.txt](./normalboot_921600.txt), which is what is printed to UART during a normal boot.
+Most of the information in this document can be gleaned directly from [normalboot_921600.txt](./normalboot_921600.txt), which is printed to UART during a normal boot.
 
-1. Under normal conditions, BROM loads the preloader (BL2) to SRAM from the emmc BOOT0 partition. BROM jumps to BL2 in SRAM after verifying its integrity (magic number header, checksum). If an efuse is burned then that check involves a knowing a cryptographic secret. (Is this mtkclient's SBC? "Signed BL2 Check"?) 
-2. BL2 for the MT8113 is apparently Little Kernel. Little Kernel does device init like setting up DRAM.
+1. Under normal conditions, BROM loads the preloader (BL2) to SRAM from the emmc BOOT0 partition. BROM jumps to BL2 in SRAM after verifying its integrity (magic number header, checksum). If an efuse is burned then that check involves a knowing a cryptographic secret. (This might be mtkclient's SBC/Secure Boot Control) 
+2. BL2 for the MT8113 is Little Kernel. Little Kernel does device init like setting up DRAM.
 3. Little Kernel uses its fitboot app to proceed. 
 
     a. fitboot selects the eMMC's tee_a GPT partition as the one containing a tee (TEE = Trusted Execution Environment). From tee_a it loads a FIT bundle (FIT= Flattened Image Tree) called "tz_ctl" into DRAM. tz_ctl is a secure world control image; TZ=TrustZone. tz_ctl describes both ATF (ARM Trusted Firmware) Secure Monitor which will be labeled BL31 by ATF, and TEE (same TEE as above) which will be labeled BL32 by ATF. the FITs either contain images of BL31 and BL32 or only descriptions of their size/location, I am not sure which.
@@ -21,22 +21,31 @@ Most of the information in this document can be gleaned directly from [normalboo
 
 7. U-Boot executes the kernel and then we're in Linux world.
 
-# Download mode on the MT8113 
+# Download mode on the Kobo Clara BW's MT8113 
 
 In step 1 above I mentioned "under normal conditions."
-An abnormal condition during boot (there might be others): before executing the preloader, the BROM checks if "Download Mode" conditions are met (like shorted Download pins). 
-In that case the BROM starts "Download Agent 1"/DA1 (which is really just some BROM routines) which waits a second or so to do a handshake over USB or UART. 
-If the "Serial Link Authentication"/SLA efuse is burned on the device then the handshake includes a cryptographic challenge.
-If the handshake succeeds DA1 exposes an interface to USB or UART with a short list of commands. 
+An abnormal condition during boot (there might be others): before executing the preloader, the BROM checks if "Download Mode" conditions are met (like shorted Download pins on the PCB).
+In that case the BROM runs some routines which wait a second or so for a handshake over USB or UART. I haven't isolated these routines in the MT8113 brom yet. 
+If the "Serial Link Authentication"/SLA efuse is enabled on the device (it isn't on the Kobo) then the handshake includes a cryptographic challenge.
+If the handshake succeeds then an interface with a short list of commands is exposed to USB or UART. 
 Documentation on this interface is scattered and device-specific. 
 
-At this point it is common to use this BROM interface to send a "Download Agent 2"/DA2 from a host machine into the device's memory, and have the device jump to execute DA2. 
-Sometimes there is an efuse that makes the brom auth the download agent before jumping to execute it ("Download Agent Authentication"/DAA). 
+At this point it is common to use this interface to send a "Download Agent"/DA from a host machine into the device's memory, and have the device jump to execute it. 
+Not enabled on the Kobo, but there is an efuse that makes the BROM authenticate the DA before jumping to execute it ("Download Agent Authentication"/DAA). 
+
+"DA" and "Download mode" can mean many things in different contexts and platforms. 
+
+ - On some devices the BROM's download mode is distinct from a download mode exposed by the preloader. 
+ - On some devices there are two DA's uploaded, the first one (DA1) setting some things up before asking for a second DA (DA2).
+ - Which of these are enabled and/or accessible, how to access them, what's loaded to ram before/after the DA executes, what jumps to which DA, is extremely context and platform-specific.
+ - On the Kobo MT8113 we apparently only have the one Download Mode: the one that BROM runs, unsecured, before the preloader/LK is loaded into SRAM. 
 
 ## mtkclient and Download Mode
-On devices with SLA and DAA enabled, bkerler published an exploit called kamakiri that disables SLA and DAA checks: while DA1 is waiting, if you upload a Kamakiri payload (possibly in a special way, I am not sure), then the payload will disable those checks and jump back to the state of DA1 waiting for commands from the host machine.
+bkerler published an exploit called kamakiri that disables SLA and DAA checks for devices with those enabled: while BROM is waiting for a DA, if you upload a Kamakiri payload in a specific context and specific way, then the Kamakiri payload will execute, disable those SLA & DAA checks and jump back to some type of download mode. 
+The details here don't apply to the Kobo's MT8113 as those protections aren't enabled here.
 
-"stage2" which is part of mtkclient takes the place of DA2: when you run `mtk.py stage` on a host PC, that script waits for DA1 to appear as a USB device, then it handshakes with the device, uploads stage2 to memory and jumps to execute stage2. 
+"stage2", shipped as part of mtkclient, takes the place of a DA: when you run `mtk.py stage` on a host PC, that script waits for the MediaTek BROM in Download mode to appear as a USB device. It handshakes with the device, uploads stage2 to the device's memory and addresses the device to jump to execute stage2. 
 On the host machine `stage2.py [...]` addresses a running stage2.
 
-On the mt8113, stage2 executes successfully and can be addressed over USB, but its included eMMC read/write routines don't work. 
+On the mt8113, stage2 executes successfully after uploading it from BROM download mode. 
+It can be addressed over USB, but its included eMMC read/write routines don't work. 
