@@ -41,10 +41,14 @@ Not enabled on the Kobo, but there is an efuse that makes the BROM authenticate 
  - On the Kobo MT8113 we apparently only have the one Download Mode: the one that BROM runs, unsecured, before the preloader/LK is loaded into SRAM. 
 
 ## mtkclient and Download Mode
-bkerler published an exploit called kamakiri that disables SLA and DAA checks for devices with those enabled: while BROM is waiting for a DA, if you upload a Kamakiri payload in a specific context and specific way, then the Kamakiri payload will execute, disable those SLA & DAA checks and jump back to some type of download mode. 
-The details here don't apply to the Kobo's MT8113 as those protections aren't enabled here.
+bkerler published an exploit called kamakiri that disables SLA and DAA checks for devices with those enabled. 
+While BROM is waiting for a DA, if you upload a Kamakiri payload in a specific context and specific way, then the Kamakiri payload will execute, disable those SLA & DAA checks and jump back to some type of download mode. 
+The details aren't very important here since the Kobo's MT8113 doesn't have those protections enabled. 
 
-"stage2", shipped as part of mtkclient, takes the place of a DA: when you run `mtk.py stage` on a host PC, that script waits for the MediaTek BROM in Download mode to appear as a USB device. It handshakes with the device, uploads stage2 to the device's memory and addresses the device to jump to execute stage2. 
+Even though we don't need kamakiri, mtkclient is still useful to build on.
+"stage2", shipped as part of mtkclient, takes the place of a DA. 
+When you run `mtk.py stage` on a host PC, that script waits for the MediaTek BROM in Download mode to appear as a USB device. 
+`mtk.py` then handshakes with the BROM, uploads & runs the kamakiri payload even though we didn't need it, then uploads & executes stage2 on the device. 
 On the host machine `stage2.py [...]` addresses a running stage2.
 
 On the mt8113, stage2 executes successfully after uploading it from BROM download mode. 
