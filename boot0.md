@@ -1,4 +1,4 @@
-# Some information about the boot0 partition's file format 
+# Some information about the boot0 partition's format 
 
 The boot0 partition contains several distinct and nested data containers.
 The integrity of this data is checked by the brom.
