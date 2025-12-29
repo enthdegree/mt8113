@@ -1,12 +1,13 @@
-documents
+gitignore_documents
 mtkclient
 kernel_source
-bootloader_source
+uboot_source
 ~*
 *.img
 *.iso
 *.elf
 *.bin
+ghidrassist*
 
 # Ghidra Project Files
 *.lock~        

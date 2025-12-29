@@ -1,6 +1,6 @@
 # Typical boot paths for the MT8113 in a Kobo Clara BW
 
-Most of the information in this document can be gleaned directly from [normalboot_921600.txt](./normalboot_921600.txt), which is printed to UART during a normal boot.
+Most of the information in this document can be gleaned directly from [normalboot_921600.txt](../logs/normalboot_921600.txt), which is printed to UART during a normal boot.
 
 1. Under normal conditions, BROM loads the preloader (BL2) to SRAM from the emmc BOOT0 partition. BROM jumps to BL2 in SRAM after verifying its integrity (magic number header, checksum). If an efuse is burned then that check involves a knowing a cryptographic secret. (This might be mtkclient's SBC/Secure Boot Control) 
 2. BL2 for the MT8113 is Little Kernel. Little Kernel does device init like setting up DRAM.
@@ -41,11 +41,11 @@ Not enabled on the Kobo, but there is an efuse that makes the BROM authenticate 
  - On the Kobo MT8113 we apparently only have the one Download Mode: the one that BROM runs, unsecured, before the preloader/LK is loaded into SRAM. 
 
 ## mtkclient and Download Mode
-bkerler published an exploit called kamakiri that disables SLA and DAA checks for devices with those enabled. 
+bkerler published an exploit called kamakiri that disables SLA and DAA checks for devices with those enabled.[1] 
 While BROM is waiting for a DA, if you upload a Kamakiri payload in a specific context and specific way, then the Kamakiri payload will execute, disable those SLA & DAA checks and jump back to some type of download mode. 
 The details aren't very important here since the Kobo's MT8113 doesn't have those protections enabled. 
 
-Even though we don't need kamakiri, mtkclient is still useful to build on.
+Even though we don't need kamakiri, mtkclient is still useful to build over.
 "stage2", shipped as part of mtkclient, takes the place of a DA. 
 When you run `mtk.py stage` on a host PC, that script waits for the MediaTek BROM in Download mode to appear as a USB device. 
 `mtk.py` then handshakes with the BROM, uploads & runs the kamakiri payload even though we didn't need it, then uploads & executes stage2 on the device. 
@@ -53,3 +53,7 @@ On the host machine `stage2.py [...]` addresses a running stage2.
 
 On the mt8113, stage2 executes successfully after uploading it from BROM download mode. 
 It can be addressed over USB, but its included eMMC read/write routines don't work. 
+
+--
+
+[1]: An explanation of Kamakiriv2 from R0rt1z2: Roger: "Another note regarding the kamakiri2 exploit, it abuses a buffer overflow in the USB SET_LINECODING request. This request expects you to send 7 bytes, but the implementation does not check how many bytes are actually sent (they just check that the size isn't 0), making it possible to overflow the USB ring buffer (or so I believe). In combination with this, a BROM-specific command (0xDA, used to peek and poke BROM registers) can be abused to gain arbitrary memory read and write access. Using these primitives, a payload is uploaded to 0x100A00, and a pointer used by USB-related functions is overwritten to point to that address. The next time a USB-related routine is executed, it immediately jumps to the payload, which patches BROM memory (not BROM itself) to "spoof" the device as insecure (for example, with SLA / DAA / SBC disabled)"

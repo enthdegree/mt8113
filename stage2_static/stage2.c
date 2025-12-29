@@ -123,7 +123,6 @@ int main() {
 
     printf("2ND stage payload\n");
     printf("(c) xyz, k4y0z, bkerler 2019-2021\n");
-    *(uint32_t *) (0x00160200) = (uint32_t) 0x12344321;
 
 //    while(1) {}
 
