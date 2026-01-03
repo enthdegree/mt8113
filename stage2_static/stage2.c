@@ -11,6 +11,22 @@
 #include "drivers/errno.h"
 #include "drivers/mmc.h"
 
+#define BROM_MSDC_EMMC_STREAM_READ_ADDR (0x000038BBu)
+typedef int (*msdc_emmc_stream_read_fn)(
+    uint32_t n_bytes_to_read,
+    char *dest,
+    uint32_t drain_only,
+    uint32_t *status_io
+);
+static inline int brom_msdc_stream_read(
+    uint32_t n_bytes_to_read, 
+    char *dest, 
+    uint32_t drain_only, 
+    uint32_t *status_io) {
+    msdc_emmc_stream_read_fn fn = (msdc_emmc_stream_read_fn)(uintptr_t)BROM_MSDC_EMMC_STREAM_READ_ADDR;
+    return fn(n_bytes_to_read, dest, drain_only, status_io);
+}
+
 void recv_data(char *addr, uint32_t sz, uint32_t flags __attribute__((unused))) {
     for (uint32_t i = 0; i < (((sz + 3) & ~3) / 4); i++) {
         ((uint32_t *)addr)[i] = __builtin_bswap32(recv_dword());
@@ -135,11 +151,10 @@ void dump_u32_bytes(const char *label, uint32_t v)
 {
     const uint8_t *b = (const uint8_t *)&v;
     printf("%s ", label);
-    put_hex_byte(b[3]); printf(" ");
-    put_hex_byte(b[2]); printf(" ");
-    put_hex_byte(b[1]); printf(" ");
+    put_hex_byte(b[3]); 
+    put_hex_byte(b[2]); 
+    put_hex_byte(b[1]);
     put_hex_byte(b[0]);
-    printf("\n");
 }
 
 int main() {
@@ -153,14 +168,15 @@ int main() {
 //    while(1) {}
 
     printf("Entering command loop\n");
-    char buffer[0x200]={0};
+    char buffer[0x200]={0xff};
+    uint32_t io_status = 0;
     send_dword(0xB1B2B3B4);
     struct msdc_host host = { 0 };
     host.ocr_avail = MSDC_OCR_AVAIL;
 
     while (1) {
         printf("Waiting for cmd\n");
-        memset(buf, 0, sizeof(buf));	
+        memset(buf, 0, sizeof(buf));    
         uint32_t magic = recv_dword();
         if (magic != 0xf00dd00d) {
             printf("Protocol error\n");
@@ -168,8 +184,8 @@ int main() {
             break;
         }
         uint32_t cmd = recv_dword();
-	dump_u32_bytes("cmd", cmd);
-	switch (cmd) {
+    dump_u32_bytes("cmd", cmd);
+    switch (cmd) {
         case 0x1000: {
             uint32_t block = recv_dword();
             printf("Read block 0x%08X\n", block);
@@ -284,10 +300,32 @@ int main() {
              break;
         }
         case 0x7000: { 
-	     printf("Hello, world.\n");
-             break;
+	    int res = 0;
+	    /*
+            printf("Seeking past the next 20 Mb...\n");
+	    int res = brom_msdc_stream_read(100000*512, buffer, 1, &io_status);
+	    dump_u32_bytes("Res", (uint32_t)res);
+	    printf("\n");
+	    dump_u32_bytes("Status", io_status);
+	    printf("\n");
+            printf("Printing bytes past current seek.\n");
+	    */ 
+	    for(uint32_t ridx=0; ridx < 512; ridx++) {
+		    res = brom_msdc_stream_read(512, buffer, 0, &io_status);
+		    dump_u32_bytes("\nRead", ridx);
+		    printf("\n");
+		    dump_u32_bytes("Res", (uint32_t)res);
+		    printf("\n");
+		    dump_u32_bytes("Status", io_status);
+		    printf("\n");
+		    for(uint32_t bidx=0; bidx<512; bidx++) {
+			    put_hex_byte(buffer[bidx]);
+		    }
+	    }
+            send_dword(0xD0D0D0D0);
+            break;
         }
-         default:
+        default:
             printf("Invalid command\n");
             break;
         }
