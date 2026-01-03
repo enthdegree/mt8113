@@ -116,6 +116,32 @@ void apmcu_disable_smp(){
     asm volatile ("mcr p15, 0, %0, c1, c0, 1" :: "r"(r0));
 }
 
+static void put_hex_nibble(uint8_t v)
+{
+    v &= 0xF;
+    char * s = "0";
+    if (v < 10) s[0] = '0' + v;
+    else s[0] = 'A' + (v - 10);
+    printf(s);
+}
+
+static void put_hex_byte(uint8_t v)
+{
+    put_hex_nibble(v >> 4);
+    put_hex_nibble(v);
+}
+
+void dump_u32_bytes(const char *label, uint32_t v)
+{
+    const uint8_t *b = (const uint8_t *)&v;
+    printf("%s ", label);
+    put_hex_byte(b[3]); printf(" ");
+    put_hex_byte(b[2]); printf(" ");
+    put_hex_byte(b[1]); printf(" ");
+    put_hex_byte(b[0]);
+    printf("\n");
+}
+
 int main() {
     searchparams();
     char buf[0x200] = { 0 };
@@ -134,7 +160,7 @@ int main() {
 
     while (1) {
         printf("Waiting for cmd\n");
-        memset(buf, 0, sizeof(buf));
+        memset(buf, 0, sizeof(buf));	
         uint32_t magic = recv_dword();
         if (magic != 0xf00dd00d) {
             printf("Protocol error\n");
@@ -142,7 +168,8 @@ int main() {
             break;
         }
         uint32_t cmd = recv_dword();
-        switch (cmd) {
+	dump_u32_bytes("cmd", cmd);
+	switch (cmd) {
         case 0x1000: {
             uint32_t block = recv_dword();
             printf("Read block 0x%08X\n", block);
@@ -256,7 +283,11 @@ int main() {
              send_dword(0xD1D1D1D1);
              break;
         }
-        default:
+        case 0x7000: { 
+	     printf("Hello, world.\n");
+             break;
+        }
+         default:
             printf("Invalid command\n");
             break;
         }
