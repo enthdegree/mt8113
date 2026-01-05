@@ -8,13 +8,13 @@ Bytes above that address (e.g. 0x11c5020) are read by various callers and determ
 
 ## MSDC, eMMC access in the Kobo Clara BW's BROM download mode context
 
-The MT8113 MSDC (Mediatek Storage Device Controller) has registers mapped to 0x11230000.
-There is a known good MSDC-read-the-eMMC path in the BROM; that's how it loads BL2. 
-By the time mtkclient's stage2 executes from BROM download mode, the BROM has already set up the MSDC to put the eMMC in PIO (Programmed Input/Output) mode and read the whole eMMC's boot0 partition that it wants in 512-byte blocks as a stream (the stream-advance routine's text at BROM 0x38ba). 
-Some unknown incompatibility in stage2's `mt_sd` driver is unable to talk to it in this state.  
+The MT8113 MSDC (Memory stick and Secure Digital card Controller) has registers mapped to 0x11230000.
+By the time mtkclient's stage2 executes from BROM download mode, the BROM has already had MSDC start the eMMC in boot-up mode and read boot0's contents in 512-byte blocks.
+The eMMC is unresponsive at this stage and stage2's MSDC driver doesn't talk to it properly.
 
 At stage2 runtime:
-- a stream cursor at register 0x00102aec holds the u32 value 0x0003e400, the length of the boot0 partition's data contents. 
-- content of boot0 appears around 0x00100040.
-- if you call the stream-advance routine it returns 0x35 (a timeout).
 
+- A software-level stream cursor at register 0x00102aec holds the u32 value 0x0003e400, the length of the boot0 partition's data contents. 
+- Content of boot0 appears around 0x00100040.
+- The MSDC peripheral is responsive but the eMMC is not. Calling the BROM's eMMC stream-advance routine returns 0x35 / timeout.
+- The EMMC_STS register is all 0s. Calling some BROM routines to start the eMMC in boot-up mode brings the "eMMC bootup state" bit in EMMC_STS up to 1, but it's possible MSDC is just asserting that without any eMMC participation.

@@ -1,4 +1,6 @@
 #include <inttypes.h>
+#include <stdint.h>
+
 
 //#include "common.h"
 #include "tools.h"
@@ -10,21 +12,117 @@
 #include "drivers/mt_sd.h"
 #include "drivers/errno.h"
 #include "drivers/mmc.h"
+#include "mt8113_brom.h"
 
-#define BROM_MSDC_EMMC_STREAM_READ_ADDR (0x000038BBu)
-typedef int (*msdc_emmc_stream_read_fn)(
-    uint32_t n_bytes_to_read,
-    char *dest,
-    uint32_t drain_only,
-    uint32_t *status_io
-);
-static inline int brom_msdc_stream_read(
-    uint32_t n_bytes_to_read, 
-    char *dest, 
-    uint32_t drain_only, 
-    uint32_t *status_io) {
-    msdc_emmc_stream_read_fn fn = (msdc_emmc_stream_read_fn)(uintptr_t)BROM_MSDC_EMMC_STREAM_READ_ADDR;
-    return fn(n_bytes_to_read, dest, drain_only, status_io);
+
+
+
+
+
+
+
+#define _MSDC_BASE      0x11230000
+
+#define _MSDC_CFG       (*(volatile uint32_t *)(_MSDC_BASE + 0x00))
+#define _MSDC_INT       (*(volatile uint32_t *)(_MSDC_BASE + 0x0C))
+#define _MSDC_INTEN     (*(volatile uint32_t *)(_MSDC_BASE + 0x10))
+#define _MSDC_FIFOCS    (*(volatile uint32_t *)(_MSDC_BASE + 0x14))
+#define _MSDC_RXDATA    (*(volatile uint32_t *)(_MSDC_BASE + 0x1C))
+
+#define _SDC_CFG        (*(volatile uint32_t *)(_MSDC_BASE + 0x30))
+#define _SDC_CMD        (*(volatile uint32_t *)(_MSDC_BASE + 0x34))
+#define _SDC_ARG        (*(volatile uint32_t *)(_MSDC_BASE + 0x38))
+#define _SDC_STS        (*(volatile uint32_t *)(_MSDC_BASE + 0x3C))
+#define _SDC_RESP0      (*(volatile uint32_t *)(_MSDC_BASE + 0x40))
+#define _SDC_RESP1      (*(volatile uint32_t *)(_MSDC_BASE + 0x44))
+#define _SDC_RESP2      (*(volatile uint32_t *)(_MSDC_BASE + 0x48))
+#define _SDC_RESP3      (*(volatile uint32_t *)(_MSDC_BASE + 0x4c))
+#define _SDC_BLK_NUM    (*(volatile uint32_t *)(_MSDC_BASE + 0x50))
+
+#define _EMMC_CFG0    (*(volatile uint32_t *)(_MSDC_BASE + 0x70))
+#define _EMMC_CFG1    (*(volatile uint32_t *)(_MSDC_BASE + 0x74))
+#define _EMMC_STS    (*(volatile uint32_t *)(_MSDC_BASE + 0x78))
+
+extern void dump_u32_bytes(const char *label, uint32_t v);
+
+void custom(void) {
+
+
+
+
+    uint32_t intr;
+
+    dump_u32_bytes("BEGIN _EMMC_CFG0", _EMMC_CFG0);
+    dump_u32_bytes("BEGIN _EMMC_STS",  _EMMC_STS);
+    dump_u32_bytes("BEGIN _MSDC_CFG",  _MSDC_CFG);
+
+    _MSDC_INTEN = 0;
+
+    intr = _MSDC_INT; _MSDC_INT = intr;
+    _MSDC_FIFOCS = (1u << 31);
+    while (_MSDC_FIFOCS & (1u << 31)) {}
+
+    /* enter boot stream */
+    brom_msdc_start_emmc_boot_read_stream(0);
+
+    dump_u32_bytes("AFTER enter _EMMC_CFG0", _EMMC_CFG0);
+    dump_u32_bytes("AFTER enter _EMMC_STS",  _EMMC_STS);
+    dump_u32_bytes("AFTER enter _SDC_STS",   _SDC_STS);
+    dump_u32_bytes("AFTER enter _SDC_BLK_NUM", _SDC_BLK_NUM);
+
+    /* stop boot stream: clear everything we can see was involved */
+    _EMMC_CFG0 &= ~(0x8000u);  /* bit15 */
+    _EMMC_CFG0 &= ~(0x0004u);  /* bit2  */
+    _EMMC_CFG0 &= ~(0x0001u);  /* bit0  */
+    _EMMC_CFG0 &= ~(0x1000u);  /* bit12 (this is what you were left with) */
+
+    /* restore sane blk count */
+    _SDC_BLK_NUM = 1;
+
+    dump_u32_bytes("AFTER stop _EMMC_CFG0", _EMMC_CFG0);
+    dump_u32_bytes("AFTER stop _EMMC_STS",  _EMMC_STS);
+    dump_u32_bytes("AFTER stop _SDC_STS",   _SDC_STS);
+    dump_u32_bytes("AFTER stop _SDC_BLK_NUM", _SDC_BLK_NUM);
+
+    /* run the same “idle ack + fifo + int clear + pad update” that BROM uses */
+    brom_msdc_wait_idle_ack_and_update();
+
+    dump_u32_bytes("AFTER idleack _MSDC_CFG", _MSDC_CFG);
+    dump_u32_bytes("AFTER idleack _MSDC_INT", _MSDC_INT);
+    dump_u32_bytes("AFTER idleack _SDC_STS",  _SDC_STS);
+
+    /* clear ints + fifo again */
+    intr = _MSDC_INT; _MSDC_INT = intr;
+    _MSDC_FIFOCS = (1u << 31);
+    while (_MSDC_FIFOCS & (1u << 31)) {}
+
+    /* CMD0 (no response) as a sanity kick */
+    _SDC_ARG = 0;
+    _SDC_CMD = (0x200u << 16) | 0u;
+    for (uint32_t i = 0; i < 200000; i++) { if (_MSDC_INT) break; }
+    dump_u32_bytes("CMD0 INT", _MSDC_INT);
+    intr = _MSDC_INT; _MSDC_INT = intr;
+
+    /* CMD1 probe (R3) */
+    _SDC_ARG = 0x40FF8000u;
+    _SDC_CMD = (0x200u << 16) | (3u << 7) | 1u;
+
+    for (uint32_t i = 0; i < 2000000; i++) {
+        if (_MSDC_INT) break;
+    }
+
+    dump_u32_bytes("CMD1 INT", _MSDC_INT);
+    dump_u32_bytes("CMD1 RESP0", _SDC_RESP0);
+    dump_u32_bytes("CMD1 RESP1", _SDC_RESP1);
+    dump_u32_bytes("CMD1 RESP2", _SDC_RESP2);
+    dump_u32_bytes("CMD1 RESP3", _SDC_RESP3);
+    dump_u32_bytes("CMD1 _SDC_STS", _SDC_STS);
+
+
+
+
+
+
 }
 
 void recv_data(char *addr, uint32_t sz, uint32_t flags __attribute__((unused))) {
@@ -155,6 +253,7 @@ void dump_u32_bytes(const char *label, uint32_t v)
     put_hex_byte(b[2]); 
     put_hex_byte(b[1]);
     put_hex_byte(b[0]);
+    printf("\n");
 }
 
 int main() {
@@ -169,7 +268,6 @@ int main() {
 
     printf("Entering command loop\n");
     char buffer[0x200]={0xff};
-    uint32_t io_status = 0;
     send_dword(0xB1B2B3B4);
     struct msdc_host host = { 0 };
     host.ocr_avail = MSDC_OCR_AVAIL;
@@ -300,30 +398,8 @@ int main() {
              break;
         }
         case 0x7000: { 
-	    int res = 0;
-	    /*
-            printf("Seeking past the next 20 Mb...\n");
-	    int res = brom_msdc_stream_read(100000*512, buffer, 1, &io_status);
-	    dump_u32_bytes("Res", (uint32_t)res);
-	    printf("\n");
-	    dump_u32_bytes("Status", io_status);
-	    printf("\n");
-            printf("Printing bytes past current seek.\n");
-	    */ 
-	    for(uint32_t ridx=0; ridx < 512; ridx++) {
-		    res = brom_msdc_stream_read(512, buffer, 0, &io_status);
-		    dump_u32_bytes("\nRead", ridx);
-		    printf("\n");
-		    dump_u32_bytes("Res", (uint32_t)res);
-		    printf("\n");
-		    dump_u32_bytes("Status", io_status);
-		    printf("\n");
-		    for(uint32_t bidx=0; bidx<512; bidx++) {
-			    put_hex_byte(buffer[bidx]);
-		    }
-	    }
-            send_dword(0xD0D0D0D0);
-            break;
+	    custom();            
+	    break;
         }
         default:
             printf("Invalid command\n");

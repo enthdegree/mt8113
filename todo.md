@@ -1,9 +1,4 @@
-# Major milestone 1: develop a DA that is capable of unbricking MT8113 from brom 
-1. In Ghidra, identify and understand eMMC init + read + write routines.
-2. Find out how `mtk.py stage` and `stage2.py` work, try and get more obvious USB logging.
-3. Extend stage2 to read/write MT8113 eMMC
-4. Test DA on userdata logical block addresses; confirm it matches dd from Linux.
-
+# Major milestone 1: develop a DA that is capable of unbricking MT8113 from brom
 # Major milestone 2: Get LK and U-boot to load a FIT image that isn't signed. 
 
     - Take an existing FIT image and change it superficially + strip the signature and checksum nodes. We don't know if LK and U-boot will actually boot this. 
