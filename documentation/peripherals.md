@@ -18,3 +18,6 @@ At stage2 runtime:
 - Content of boot0 appear starting at some places past around 0x00100040.
 - Calling the BROM's eMMC stream-advance routine returns 0x35 / timeout.
 - The EMMC_STS register is all 0s. Calling some BROM routines to start the eMMC in boot-up mode brings the "eMMC bootup state" bit in EMMC_STS up to 1, but it's likely MSDC is just asserting that without any eMMC participation. 
+
+The next actor that brings the eMMC out of this state is apparently the Little Kernel preloader which is AArch64 v8A LE instructions stored in boot0. 
+Details about how it inits the eMMC are unknown right now. 
