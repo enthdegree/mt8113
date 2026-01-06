@@ -3,7 +3,7 @@
 ## eFuse
 
 There is an efuse assigned registers around 0x11c5000. 
-A brom routine kicks the peripheral alive by writing bit2 to 1 and waiting for bit0 to go to 1.
+A brom routine kicks the peripheral alive by pulling up bit2 then waiting for bit0 to go up.
 Bytes above that address (e.g. 0x11c5020) are read by various callers and determine policy/config.
 
 ## MSDC, eMMC access in the Kobo Clara BW's BROM download mode context
