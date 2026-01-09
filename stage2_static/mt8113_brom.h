@@ -10,9 +10,9 @@ static inline void brom_msdc_wait_idle_ack_and_update(void) {
 
 
 #define BROM_EMMC_SYNC_CONTROLLER_STATE_ADDR ((uintptr_t)0x00002F65u)
-typedef void (*brom_emmc_sync_controller_state_fn)(void);
-static inline void brom_emmc_sync_controller_state(void) {
-    ((brom_emmc_sync_controller_state_fn)BROM_EMMC_SYNC_CONTROLLER_STATE_ADDR)();
+typedef uint32_t (*brom_emmc_sync_controller_state_fn)(void);
+static inline uint32_t brom_emmc_sync_controller_state(void) {
+    return ((brom_emmc_sync_controller_state_fn)BROM_EMMC_SYNC_CONTROLLER_STATE_ADDR)();
 }
 
 
@@ -59,19 +59,19 @@ static inline uint32_t brom_msdc_maybe_wait_irq_bits_and_clear(void) {
 
 
 
-#define BROM_MSDC_EMMC_STREAM_READ_ADDR  ((uintptr_t)0x000038BBu) // Thumb
-typedef int (*brom_msdc_read_bytes_or_discard_fn)(
+#define BROM_MSDC_READ_BYTES_OR_DISCARD  ((uintptr_t)0x000038BBu) // Thumb
+typedef uint32_t (*brom_msdc_read_bytes_or_discard_fn)(
     uint32_t len,
     uint8_t *dest,
     uint32_t drain_only,   // 0 or 1
     uint32_t *status_io
 );
-static inline int brom_msdc_stream_read(uint32_t len,
+static inline uint32_t brom_msdc_read_bytes_or_discard(uint32_t len,
                                         uint8_t *dest,
                                         uint32_t drain_only,
                                         uint32_t *status_io) {
     brom_msdc_read_bytes_or_discard_fn fn =
-        (brom_msdc_read_bytes_or_discard_fn)BROM_MSDC_EMMC_STREAM_READ_ADDR;
+        (brom_msdc_read_bytes_or_discard_fn)BROM_MSDC_READ_BYTES_OR_DISCARD;
     return fn(len, dest, drain_only, status_io);
 }
 
