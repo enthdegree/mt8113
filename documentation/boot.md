@@ -2,8 +2,8 @@
 
 Most of the information in this document can be gleaned directly from [normalboot_921600.txt](../logs/normalboot_921600.txt), which is printed to UART during a normal boot.
 
-1. Under normal conditions, BROM loads the preloader (BL2) to SRAM from the emmc BOOT0 partition. BROM jumps to BL2 in SRAM after verifying its integrity (magic number header, checksum). If an efuse is burned then that check involves a knowing a cryptographic secret. (This might be mtkclient's SBC/Secure Boot Control) 
-2. BL2 for the MT8113 is Little Kernel. Little Kernel does device init like setting up DRAM.
+1. BROM runs in ARM v7 LE (as far as I can tell). Under normal conditions, BROM loads the preloader (BL2) to SRAM from the emmc BOOT0 partition. BROM jumps to BL2 in SRAM after verifying its integrity (magic number header, checksum). If an efuse is burned then that check involves a knowing a cryptographic secret. (This might be mtkclient's SBC/Secure Boot Control) 
+2. BL2 for the MT8113 is Little Kernel. Little Kernel does device init like setting up DRAM. As far as I know Little Kernel runs in AArch64 v8A LE.
 3. Little Kernel uses its fitboot app to proceed. 
 
     a. fitboot selects the eMMC's tee_a GPT partition as the one containing a tee (TEE = Trusted Execution Environment). From tee_a it loads a FIT bundle (FIT= Flattened Image Tree) called "tz_ctl" into DRAM. tz_ctl is a secure world control image; TZ=TrustZone. tz_ctl describes both ATF (ARM Trusted Firmware) Secure Monitor which will be labeled BL31 by ATF, and TEE (same TEE as above) which will be labeled BL32 by ATF. the FITs either contain images of BL31 and BL32 or only descriptions of their size/location, I am not sure which.
