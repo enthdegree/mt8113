@@ -1,4 +1,4 @@
-# Major milestone 1: develop a DA that is capable of unbricking MT8113 from brom
+# Major milestone 1: develop a DA that is capable of unbricking a Kobo from brom
 # Major milestone 2: Get LK and U-boot to load a FIT image that isn't signed. 
 
 - Take an existing FIT image and change it superficially + strip the signature and checksum nodes. We don't know if LK and U-boot will actually boot this. 
