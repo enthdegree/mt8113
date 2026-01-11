@@ -211,7 +211,8 @@ int main() {
              break;
         }
         case 0x7000: { 
-            emmc_roundtrip_test();            
+            emmc_boot0_verify_test();            
+            // emmc_roundtrip_test(); // /!\ Dangerous to uncomment this (but it works for me)
             break;
         }
         default:
