@@ -1,8 +1,8 @@
-# mt8113 stage2 emmc r/w
+# mt8113 Stage2 eMMC read/write
 
-Here we endeavor to make a download agent for some 2024-era Kobo ebook readers.
-The goal is to allow recovery from bricks such as the one from [mtkclient issue 1332](https://github.com/bkerler/mtkclient/issues/1332) and maybe eventually allow for safe kernel development.
-The approach is to modify bkerler/mtkclient's stage2_static as a platform. 
+Here we endeavor to make a download agent for some 2024-era Kobo ebook readers that runs from the BROM download mode context.
+The goal is to allow recovery from bricks such as the one from [mtkclient issue 1332](https://github.com/bkerler/mtkclient/issues/1332) and ideally allow for safe kernel development.
+The approach is to use bkerler/mtkclient's stage2_static as a platform. 
 Needless to say, at this stage everything in this repo is dangerous.
 
 ## Status
@@ -26,7 +26,7 @@ Connect the Kobo to a computer via USB and start mtkclient to try to upload the 
 python3 mtk.py stage --stage2 path/to/custom/stage2.bin
 ```
 
-Then put the Kobo in download mode: hold its PCB's download pin shorted, then tap & release a short on the reset pin. 
+Put the Kobo in download mode: hold its PCB's download pin shorted, then tap & release a short on the reset pin. 
 This is easy to do with two bits of aluminum foil. 
 - Factory-fresh boards have a thin clear protective coating you have to scrape off 
 - Newer board revisions only need download shorted 
