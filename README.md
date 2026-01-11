@@ -1,20 +1,20 @@
 # mt8113 Stage2 eMMC read/write
 
 Here we endeavor to make a download agent for some 2024-era Kobo ebook readers that runs from the BROM download mode context.
-The goal is to allow recovery from bricks such as the one from [mtkclient issue 1332](https://github.com/bkerler/mtkclient/issues/1332) and ideally allow for safe kernel development.
+The goal is to allow recovery from bricks such as [mtkclient issue 1332](https://github.com/bkerler/mtkclient/issues/1332) and thus eventually allow for safe kernel development.
 The approach is to use bkerler/mtkclient's stage2_static as a platform. 
 Needless to say, at this stage everything in this repo is dangerous.
 
 ## Status
 
-We have succeeded in getting observable PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from a BROM Download Mode context. 
+We have observed successful PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from BROM Download Mode. 
 Routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
 Some small tests that print status to UART succeed:
 
- - `emmc_boot0_verify_test`: read the first two sectors of `boot0` and look for magic strings.
- - `emmc_roundtrip_test`: read, overwrite and then revert some sector in userdata.
+ - `emmc_boot0_verify_test`: read + dump the first two sectors of the eMMC's `boot0` region and look for the expected magic strings.
+ - `emmc_roundtrip_test`: read, overwrite and then revert some sector in the `userdata` region. (Dangerous!)
 
-See below for how to trigger those routines.
+See below for how to trigger these tests.
 I'm only testing on a Kobo Clara BW right now but in principle most MT8113-based Kobos should work too.
 This requires more dangerous testing.
 
