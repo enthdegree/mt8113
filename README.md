@@ -1,7 +1,7 @@
 # mt8113 Stage2 eMMC read/write
 
 Here we endeavor to make a download agent for some 2024-era Kobo ebook readers that runs from the BROM download mode context.
-The goal is to allow recovery from bricks such as the one from [mtkclient issue 1332](https://github.com/bkerler/mtkclient/issues/1332) and maybe eventually allow for safe kernel development.
+The goal is to allow recovery from bricks such as the one from [mtkclient issue 1332](https://github.com/bkerler/mtkclient/issues/1332) and ideally allow for safe kernel development.
 The approach is to use bkerler/mtkclient's stage2_static as a platform. 
 Needless to say, at this stage everything in this repo is dangerous.
 
