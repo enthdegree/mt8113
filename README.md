@@ -28,6 +28,8 @@ python3 mtk.py stage --stage2 path/to/custom/stage2.bin
 
 Then put the Kobo in download mode: hold its PCB's download pin shorted, then tap & release a short on the reset pin. 
 This is easy to do with two bits of aluminum foil. 
+- Factory-fresh boards have a thin clear protective coating you have to scrape off 
+- Newer board revisions only need download shorted 
 
 Eventually mtkclient should see the Kobo in BROM download mode and stage2 will upload + execute.
 To exec the test routines you need to add a path to `stage2.py` that sends the cmd `0x7000`.  
