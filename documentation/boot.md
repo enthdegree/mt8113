@@ -24,8 +24,10 @@ Most of the information in this document can be gleaned directly from [normalboo
 # Download mode on the Kobo Clara BW's MT8113 
 
 In step 1 above I mentioned "under normal conditions."
-An abnormal condition during boot (there might be others): before executing the preloader, the BROM checks if "Download Mode" conditions are met (like shorted Download pins on the PCB).
-In that case the BROM runs some routines which wait a second or so for a handshake over USB or UART. I haven't isolated these routines in the MT8113 brom yet. 
+An abnormal condition during boot (there might be others): before executing the preloader, the BROM checks if "Download Mode" conditions are met.
+Details are unclear since I haven't decompiled those gates in the BROM yet, but one such condition is shorted Download pins on the PCB. Another is if other available boot methods fail in the BROM (e.g. a corrupted boot0 region).
+
+In that case the BROM runs some routines which wait a second or so for a handshake over USB or UART. 
 If the "Serial Link Authentication"/SLA efuse is enabled on the device (it isn't on the Kobo) then the handshake includes a cryptographic challenge.
 If the handshake succeeds then an interface with a short list of commands is exposed to USB or UART. 
 Documentation on this interface is scattered and device-specific. 
