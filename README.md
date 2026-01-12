@@ -32,7 +32,7 @@ This is easy to do with two bits of aluminum foil.
 - Newer board revisions only need download shorted 
 
 Eventually mtkclient should see the Kobo in BROM download mode and stage2 will upload + execute.
-To exec the test routines you need to add a path to `stage2.py` that sends the cmd `0x7000`.  
+To exec the test routines you need to add a codepath to `stage2.py` that sends the cmd `0x7000`.  
 In my copy of stage2.py I run it like this:
 ```
 python3 ./stage2.py custom
