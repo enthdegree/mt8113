@@ -1,13 +1,13 @@
 # mt8113 Stage2 eMMC read/write
 
-Here we endeavor to make a download agent that runs from the BROM download mode context for some 2024-era Kobo ebook readers.
+Here we endeavor to make a download agent that runs from the BROM download mode of some 2024-era Kobo ereaders.
 The goal is to allow recovery from bricks such as [mtkclient issue 1332](https://github.com/bkerler/mtkclient/issues/1332) and thus eventually allow for safe kernel development.
 The approach is to use bkerler/mtkclient's stage2_static as a platform. 
 Needless to say, at this stage everything in this repo is dangerous.
 
 ## Status
 
-We have observed successful PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from BROM Download Mode. 
+We have observed successful PIO read/write of 512-byte eMMC sectors with CMD17/CMD24 from BROM Download Mode. 
 Routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
 Some small tests that print status to UART succeed:
 
