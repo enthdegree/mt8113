@@ -6,7 +6,7 @@
 #include "drivers/sleepy.h"
 #include "mt8113_emmc.h"
 
-extern void dump_u32_bytes(const char *label, uint32_t v);
+extern const char* u32_to_str(uint32_t v);
 
 static uint32_t current_partition = EMMC_PART_USER;
 
@@ -43,30 +43,17 @@ static inline void dsb(void) {
     asm volatile ("dsb" ::: "memory");
 }
 
-static void put_hex_nibble(uint8_t v)
+const char* u32_to_str(uint32_t v)
 {
-    v &= 0xF;
-    char * s = "0";
-    if (v < 10) s[0] = '0' + v;
-    else s[0] = 'A' + (v - 10);
-    printf(s);
-}
+    static const char hex[] = "0123456789ABCDEF";
+    static char buf[9];
 
-static void put_hex_byte(uint8_t v)
-{
-    put_hex_nibble(v >> 4);
-    put_hex_nibble(v);
-}
+    for (int i = 0; i < 8; i++) {
+        buf[i] = hex[(v >> (28 - i * 4)) & 0xF];
+    }
+    buf[8] = '\0';
 
-void dump_u32_bytes(const char *label, uint32_t v)
-{
-    const uint8_t *b = (const uint8_t *)&v;
-    printf("%s ", label);
-    put_hex_byte(b[3]); 
-    put_hex_byte(b[2]); 
-    put_hex_byte(b[1]);
-    put_hex_byte(b[0]);
-    printf("\n");
+    return buf;
 }
 
 int main() {
@@ -74,8 +61,8 @@ int main() {
     char buf[0x200] = { 0 };
     int ret = 0;
 
-    printf("2ND stage payload\n");
     printf("(c) xyz, k4y0z, bkerler 2019-2021\n");
+    printf("mt8113 emmc r/w (c) enthdegree et. al. 2026\n");
 
 //    while(1) {}
 
@@ -93,12 +80,11 @@ int main() {
             break;
         }
         uint32_t cmd = recv_dword();
-    dump_u32_bytes("cmd", cmd);
+    printf("cmd %s\n", u32_to_str(cmd));
     switch (cmd) {
         case 0x1000: {
             uint32_t block = recv_dword();
-            printf("Read sector ");
-            dump_u32_bytes("", block);
+            printf("Read sector %s\n", u32_to_str(block));
             memset(buf, 0, sizeof(buf));
             if (emmc_read_sector(current_partition, block, (uint32_t*)buf) != 0) {
                 printf("Read error!\n");
@@ -109,8 +95,7 @@ int main() {
         }
         case 0x1001: {
             uint32_t block = recv_dword();
-            printf("Write sector ");
-            dump_u32_bytes("", block);
+            printf("Write sector %s\n", u32_to_str(block));
             memset(buf, 0, sizeof(buf));
             usbdl_get_data(buf, 0x200, 0);
             if (emmc_write_sector(current_partition, block, (uint32_t*)buf) != 0) {
@@ -125,7 +110,7 @@ int main() {
             uint32_t part = recv_dword();
             printf("Switch to partition %d => ", part);
             ret = emmc_switch_partition(part);
-            dump_u32_bytes("result", ret);
+            printf("result %s\n", u32_to_str(ret));
             if (ret == 0) current_partition = part;
             mdelay(500); // just in case
             break;
@@ -199,7 +184,9 @@ int main() {
         }
         case 0x7000: { 
             emmc_boot0_verify_test();            
-            emmc_roundtrip_test(); // /!\ Dangerous to uncomment this (but it works for me)
+            // emmc_roundtrip_test(); // /!\ Dangerous to uncomment this
+            printf("The dangerous emmc_roundtrip_test which involves read and write is disabled in this build.\n");
+	    printf("Uncomment the line in stage2.c and recompile to try it.\n");
             break;
         }
         default:

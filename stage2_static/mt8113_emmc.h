@@ -6,7 +6,7 @@
 #define EMMC_PART_BOOT0   1
 #define EMMC_PART_BOOT1   2
 
-extern void dump_u32_bytes(const char *label, uint32_t v);
+extern const char* u32_to_str(uint32_t v);
 int buffers_equal(uint32_t *a, uint32_t *b, int words);
 void msdc_wait_cmd_ready(void);
 void msdc_clear_fifo(void);
