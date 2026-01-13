@@ -18,7 +18,7 @@ STAGE2DST := ../../build/stage2
 DSTPATH := ../../payloads
 STAGE2DST_BIN := $(DSTPATH)/$(STAGE2).bin
 
-STAGE2_SRC = stage2.c mt8113_emmc.c tools.c libc.c printf.c drivers/sleepy.c drivers/sd.c drivers/mmc.c crypto/sha256.c crypto/hmac-sha256.c 
+STAGE2_SRC = stage2.c mt8113_emmc.c tools.c libc.c printf.c drivers/sleepy.c 
 ASM_SRC = start.S
 
 STAGE2_OBJ = $(STAGE2_SRC:%.c=$(STAGE2DST)/%.o) $(ASM_SRC:%.S=$(STAGE2DST)/%.o)

@@ -1,6 +1,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// Partition constants
+#define EMMC_PART_USER    0
+#define EMMC_PART_BOOT0   1
+#define EMMC_PART_BOOT1   2
+
 extern void dump_u32_bytes(const char *label, uint32_t v);
 int buffers_equal(uint32_t *a, uint32_t *b, int words);
 void msdc_wait_cmd_ready(void);
@@ -11,8 +16,8 @@ int msdc_wait_card_ready(void);
 
 void emmc_init(void);
 int emmc_switch_partition(uint32_t partition);
-int emmc_read_block(uint32_t partition, uint32_t block_num, uint32_t *buffer);
-int emmc_write_block(uint32_t partition, uint32_t block_num, uint32_t *buffer);
+int emmc_read_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer);
+int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer);
 void emmc_roundtrip_test(void);
 void emmc_boot0_verify_test(void); 
 

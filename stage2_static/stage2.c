@@ -1,18 +1,14 @@
-#include <inttypes.h>
 #include <stdint.h>
 
 #include "tools.h"
 #include "printf.h"
 #include "libc.h"
 #include "drivers/sleepy.h"
-#include "drivers/types.h"
-#include "drivers/core.h"
-#include "drivers/mt_sd.h"
-#include "drivers/errno.h"
-#include "drivers/mmc.h"
 #include "mt8113_emmc.h"
 
 extern void dump_u32_bytes(const char *label, uint32_t v);
+
+static uint32_t current_partition = EMMC_PART_USER;
 
 void recv_data(char *addr, uint32_t sz, uint32_t flags __attribute__((unused))) {
     for (uint32_t i = 0; i < (((sz + 3) & ~3) / 4); i++) {
@@ -41,6 +37,10 @@ void apmcu_disable_smp(){
     asm volatile ("mrc p15, 0, %0, c1, c0, 1" : "=r"(r0));
     asm volatile ("bic %0,%0,#0x40" : "=r"(r0) : "r"(r0)); /* SMP bit */
     asm volatile ("mcr p15, 0, %0, c1, c0, 1" :: "r"(r0));
+}
+
+static inline void dsb(void) {
+    asm volatile ("dsb" ::: "memory");
 }
 
 static void put_hex_nibble(uint8_t v)
@@ -82,8 +82,6 @@ int main() {
     printf("Entering command loop\n");
     char buffer[0x200]={0xff};
     send_dword(0xB1B2B3B4);
-    struct msdc_host host = { 0 };
-    host.ocr_avail = MSDC_OCR_AVAIL;
 
     while (1) {
         printf("Waiting for cmd\n");
@@ -99,9 +97,10 @@ int main() {
     switch (cmd) {
         case 0x1000: {
             uint32_t block = recv_dword();
-            printf("Read block 0x%08X\n", block);
+            printf("Read sector ");
+            dump_u32_bytes("", block);
             memset(buf, 0, sizeof(buf));
-            if (mmc_read(&host, block, buf) != 0) {
+            if (emmc_read_sector(current_partition, block, (uint32_t*)buf) != 0) {
                 printf("Read error!\n");
             } else {
                 usbdl_put_data(buf, sizeof(buf));
@@ -110,10 +109,11 @@ int main() {
         }
         case 0x1001: {
             uint32_t block = recv_dword();
-            printf("Write block 0x%08X ", block);
+            printf("Write sector ");
+            dump_u32_bytes("", block);
             memset(buf, 0, sizeof(buf));
             usbdl_get_data(buf, 0x200, 0);
-            if (mmc_write(&host, block, buf) != 0) {
+            if (emmc_write_sector(current_partition, block, (uint32_t*)buf) != 0) {
                 printf("Write error!\n");
             } else {
                 printf("OK\n");
@@ -124,22 +124,10 @@ int main() {
         case 0x1002: {
             uint32_t part = recv_dword();
             printf("Switch to partition %d => ", part);
-            ret = mmc_set_part(&host, part);
-            printf("0x%08X\n", ret);
+            ret = emmc_switch_partition(part);
+            dump_u32_bytes("result", ret);
+            if (ret == 0) current_partition = part;
             mdelay(500); // just in case
-            break;
-        }
-        case 0x2000: {
-            printf("Read rpmb\n");
-            uint16_t addr = (uint16_t)recv_word();
-            mmc_rpmb_read(&host, addr, buf);
-            usbdl_put_data(buf, 0x100);
-            break;
-        }
-        case 0x2001: {
-            printf("Write rpmb\n");
-            usbdl_get_data(buf, 0x100, 0);
-            mmc_rpmb_write(&host, buf);
             break;
         }
         case 0x3000: {
@@ -205,14 +193,13 @@ int main() {
             break;
         }
         case 0x6000: {
-             mmc_init(&host);
-             mmc_host_init(&host);
+             emmc_init();
              send_dword(0xD1D1D1D1);
              break;
         }
         case 0x7000: { 
             emmc_boot0_verify_test();            
-            // emmc_roundtrip_test(); // /!\ Dangerous to uncomment this (but it works for me)
+            emmc_roundtrip_test(); // /!\ Dangerous to uncomment this (but it works for me)
             break;
         }
         default:
