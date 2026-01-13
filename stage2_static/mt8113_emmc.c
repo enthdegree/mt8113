@@ -188,9 +188,9 @@ void emmc_init(void) {
     msdc[MSDC_CFG] &= 0xFFBFFFFF;
     msdc[PATCH_BIT2] |= 0x10000000;
     
-    printf("MSDC_CFG before clk %s\n", u32_to_str(msdc[MSDC_CFG]));
+    printf("MSDC_CFG before clk 0x%s\n", u32_to_str(msdc[MSDC_CFG]));
     msdc[MSDC_CFG] = (msdc[MSDC_CFG] & 0xFFC000FF) | 0x18500;
-    printf("MSDC_CFG after clk %s\n", u32_to_str(msdc[MSDC_CFG]));
+    printf("MSDC_CFG after clk 0x%s\n", u32_to_str(msdc[MSDC_CFG]));
     
     // Wait for clock stable with timeout
     for (int i = 0; i < 100000; i++) {
@@ -198,7 +198,7 @@ void emmc_init(void) {
     }
     if (!(msdc[MSDC_CFG] & 0x80)) {
         printf("Clock not stable!\n");
-        printf("MSDC_CFG %s\n", u32_to_str(msdc[MSDC_CFG]));
+        printf("MSDC_CFG 0x%s\n", u32_to_str(msdc[MSDC_CFG]));
     }
     
     // Timeout config
@@ -351,8 +351,8 @@ int emmc_read_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer) 
         
         if ((int_status & (INT_DATCRCERR | INT_DATTMO)) || words_read < 128) {
             printf("Read error\n");
-            printf("INT %s\n", u32_to_str(int_status));
-            printf("words_read %s\n", u32_to_str(words_read));
+            printf("INT 0x%s\n", u32_to_str(int_status));
+            printf("words_read 0x%s\n", u32_to_str(words_read));
             return -1;
         }
         
@@ -383,7 +383,7 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
     // Set block count to 1
     msdc[SDC_BLK_NUM] = 1;
 
-    printf("Write sector %s\n", u32_to_str(sector_num));
+    printf("Write sector 0x%s\n", u32_to_str(sector_num));
 
     // CMD24 - WRITE_SINGLE_BLOCK
     msdc_wait_cmd_ready();
@@ -396,13 +396,13 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
         return -1;
     }
 
-    printf("CMD24 RESP0 %s\n", u32_to_str(msdc[SDC_RESP0]));
-    printf("CMD24 INT %s\n", u32_to_str(msdc[MSDC_INT]));
+    printf("CMD24 RESP0 0x%s\n", u32_to_str(msdc[SDC_RESP0]));
+    printf("CMD24 INT 0x%s\n", u32_to_str(msdc[MSDC_INT]));
 
     // Check card accepted write command
     if (msdc[SDC_RESP0] & 0xFDF90008) {
         printf("CMD24 error in response\n");
-        printf("RESP0 %s\n", u32_to_str(msdc[SDC_RESP0]));
+        printf("RESP0 0x%s\n", u32_to_str(msdc[SDC_RESP0]));
         return -1;
     }
     
@@ -421,7 +421,7 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
         }
     }
     
-    printf("Words written %s\n", u32_to_str(words_written));
+    printf("Words written 0x%s\n", u32_to_str(words_written));
 
     if (words_written < 128) {
         printf("Write FIFO timeout\n");
@@ -435,16 +435,16 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
         if (int_status & INT_XFER_COMPL) break;
         if (int_status & (INT_DATCRCERR | INT_DATTMO)) {
             printf("Write data error\n");
-            printf("INT %s\n", u32_to_str(int_status));
+            printf("INT 0x%s\n", u32_to_str(int_status));
             return -1;
         }
     }
 
     if (timeout_val == 0) {
         printf("Write timeout waiting for XFER_COMPL\n");
-        printf("MSDC_INT %s\n", u32_to_str(msdc[MSDC_INT]));
-        printf("SDC_STS %s\n", u32_to_str(msdc[SDC_STS]));
-        printf("FIFOCS %s\n", u32_to_str(msdc[MSDC_FIFOCS]));
+        printf("MSDC_INT 0x%s\n", u32_to_str(msdc[MSDC_INT]));
+        printf("SDC_STS 0x%s\n", u32_to_str(msdc[SDC_STS]));
+        printf("FIFOCS 0x%s\n", u32_to_str(msdc[MSDC_FIFOCS]));
         return -1;
     }
     
@@ -503,7 +503,7 @@ void emmc_boot0_verify_test(void) {
     printf("\n=== Boot0 Block 0 (512 bytes) ===\n");
     uint8_t *b0 = (uint8_t *)block0;
     for (int i = 0; i < 512; i += 16) {
-        printf("%s ", u32_to_str(i));
+        printf("0x%s ", u32_to_str(i));
         for (int j = 0; j < 16; j++) {
             print_hex_byte(b0[i + j]);
         }
@@ -514,7 +514,7 @@ void emmc_boot0_verify_test(void) {
     printf("\n=== Boot0 Block 1 (512 bytes) ===\n");
     uint8_t *b1 = (uint8_t *)block1;
     for (int i = 0; i < 512; i += 16) {
-        printf("%s ", u32_to_str(i));
+        printf("0x%s ", u32_to_str(i));
         for (int j = 0; j < 16; j++) {
             print_hex_byte(b1[i + j]);
         }
@@ -553,7 +553,7 @@ void emmc_roundtrip_test(void) {
     int failed = 0;
     
     printf("\n=== eMMC Roundtrip Test ===\n");
-    printf("Test block %s\n", u32_to_str(TEST_BLOCK));
+    printf("Test block 0x%s\n", u32_to_str(TEST_BLOCK));
 
     emmc_init();
 
@@ -563,7 +563,7 @@ void emmc_roundtrip_test(void) {
         printf("FAILED: Could not read original block\n");
         return;
     }
-    printf("Original first word %s\n", u32_to_str(original[0]));
+    printf("Original first word 0x%s\n", u32_to_str(original[0]));
 
     // Step 2: Create and write test pattern
     printf("\n[2] Writing test pattern...\n");
@@ -586,8 +586,8 @@ void emmc_roundtrip_test(void) {
     }
     if (!buffers_equal(test_pattern, readback, 128)) {
         printf("FAILED: Test pattern mismatch!\n");
-        printf("Expected %s\n", u32_to_str(test_pattern[0]));
-        printf("Got %s\n", u32_to_str(readback[0]));
+        printf("Expected 0x%s\n", u32_to_str(test_pattern[0]));
+        printf("Got 0x%s\n", u32_to_str(readback[0]));
         failed = 1;
         goto restore;
     }
@@ -615,8 +615,8 @@ restore:
     }
     if (!buffers_equal(original, readback, 128)) {
         printf("FAILED: Original not restored correctly!\n");
-        printf("Expected %s\n", u32_to_str(original[0]));
-        printf("Got %s\n", u32_to_str(readback[0]));
+        printf("Expected 0x%s\n", u32_to_str(original[0]));
+        printf("Got 0x%s\n", u32_to_str(readback[0]));
         return;
     }
     printf("Original restored OK\n");

@@ -76,15 +76,15 @@ int main() {
         uint32_t magic = recv_dword();
         if (magic != 0xf00dd00d) {
             printf("Protocol error\n");
-            printf("Magic received = 0x%08X\n", magic);
+            printf("Magic received = 0x%s\n", u32_to_str(magic));
             break;
         }
         uint32_t cmd = recv_dword();
-    printf("cmd %s\n", u32_to_str(cmd));
+    printf("cmd 0x%s\n", u32_to_str(cmd));
     switch (cmd) {
         case 0x1000: {
             uint32_t block = recv_dword();
-            printf("Read sector %s\n", u32_to_str(block));
+            printf("Read sector 0x%s\n", u32_to_str(block));
             memset(buf, 0, sizeof(buf));
             if (emmc_read_sector(current_partition, block, (uint32_t*)buf) != 0) {
                 printf("Read error!\n");
@@ -95,7 +95,7 @@ int main() {
         }
         case 0x1001: {
             uint32_t block = recv_dword();
-            printf("Write sector %s\n", u32_to_str(block));
+            printf("Write sector 0x%s\n", u32_to_str(block));
             memset(buf, 0, sizeof(buf));
             usbdl_get_data(buf, 0x200, 0);
             if (emmc_write_sector(current_partition, block, (uint32_t*)buf) != 0) {
@@ -110,7 +110,7 @@ int main() {
             uint32_t part = recv_dword();
             printf("Switch to partition %d => ", part);
             ret = emmc_switch_partition(part);
-            printf("result %s\n", u32_to_str(ret));
+            printf("result 0x%s\n", u32_to_str(ret));
             if (ret == 0) current_partition = part;
             mdelay(500); // just in case
             break;
@@ -135,7 +135,7 @@ int main() {
         case 0x4002: {
             uint32_t address = recv_dword();
             uint32_t size = recv_dword();
-            printf("Read %d Bytes from address 0x%08X\n", size, address);
+            printf("Read %d Bytes from address 0x%s\n", size, u32_to_str(address));
             usbdl_put_data(address, size);
             break;
         }
@@ -149,23 +149,23 @@ int main() {
                 // This is needed for registers to be written correctly
                 *(volatile unsigned int *)(address) = *(unsigned int*)buffer;
                 dsb();
-                printf("Reg dword 0x%08X addr with value 0x%08X\n", address, *(unsigned int*)buffer);
+                printf("Reg dword 0x%s addr with value 0x%s\n", u32_to_str((uint32_t)address), u32_to_str(*(unsigned int*)buffer));
             } else if (size==2){
                 // This is needed for registers to be written correctly
                 *(volatile unsigned short *)(address) = *(unsigned short*)buffer;
                 dsb();
-                printf("Reg short 0x%08X addr with value 0x%08X\n", address, *(unsigned short*)buffer);
+                printf("Reg short 0x%s addr with value 0x%s\n", u32_to_str((uint32_t)address), u32_to_str(*(unsigned short*)buffer));
             }
             else if (size==1){
                 // This is needed for registers to be written correctly
                 *(volatile unsigned char *)(address) = *(unsigned char*)buffer;
                 dsb();
-                printf("Reg byte 0x%08X addr with value 0x%08X\n", address, *(unsigned char*)buffer);
+                printf("Reg byte 0x%s addr with value 0x%s\n", u32_to_str((uint32_t)address), u32_to_str(*(unsigned char*)buffer));
             }
             else {
                 memcpy(address,buffer,size);
                 }
-            printf("Write %d Bytes to address 0x%08X\n", size, address);
+            printf("Write %d Bytes to address 0x%s\n", size, u32_to_str((uint32_t)address));
             send_dword(0xD0D0D0D0);
             break;
         }
@@ -184,9 +184,8 @@ int main() {
         }
         case 0x7000: { 
             emmc_boot0_verify_test();            
-            // emmc_roundtrip_test(); // /!\ Dangerous to uncomment this
-            printf("The dangerous emmc_roundtrip_test which involves read and write is disabled in this build.\n");
-	    printf("Uncomment the line in stage2.c and recompile to try it.\n");
+            //emmc_roundtrip_test(); // /!\ Dangerous to uncomment this
+            printf("emmc_roundtrip_test which involves read/write is disabled in this build.\nUncomment the above line in stage2.c to enable it.\n");
             break;
         }
         default:
