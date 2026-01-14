@@ -7,12 +7,14 @@ Needless to say, at this stage everything in this repo is dangerous.
 
 ## Status
 
-We have an extremely basic prototype DA [`mt8113_reflash.py`](./mt8113_reflash.py) that does PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from BROM Download Mode. Features:
+We have an extremely basic prototype DA client [`mt8113_reflash.py`](./mt8113_reflash.py). 
+It does PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from BROM Download Mode. 
+Features:
 
  - Parse eMMC userdata GPT table
  - Dump eMMC EXT_CSD register
- - Very slow partition dump at 70 kbps
- - Untested eMMC write interface
+ - Very slow read / partition dump at 70 kbps
+ - Untested write
 
  Only 70 kbps = it has transport issues that need to be solved before it is practical. Routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
 
