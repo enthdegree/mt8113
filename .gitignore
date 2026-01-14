@@ -7,6 +7,8 @@ uboot_source
 *.iso
 *.elf
 *.bin
+*.json
+__pycache__
 ghidrassist*
 
 # Ghidra Project Files

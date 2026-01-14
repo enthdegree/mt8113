@@ -6,9 +6,11 @@
 #include "drivers/sleepy.h"
 #include "mt8113_emmc.h"
 
-extern const char* u32_to_str(uint32_t v);
+// USB buffer length for usbdl_put_data chunks
+// Larger chunks = better throughput
+#define USBDL_CHUNK_SIZE 256
 
-static uint32_t current_partition = EMMC_PART_USER;
+extern const char* u32_to_str(uint32_t v);
 
 void recv_data(char *addr, uint32_t sz, uint32_t flags __attribute__((unused))) {
     for (uint32_t i = 0; i < (((sz + 3) & ~3) / 4); i++) {
@@ -59,19 +61,21 @@ const char* u32_to_str(uint32_t v)
 int main() {
     searchparams();
     char buf[0x200] = { 0 };
-    int ret = 0;
 
     printf("(c) xyz, k4y0z, bkerler 2019-2021\n");
     printf("mt8113 emmc r/w (c) enthdegree et. al. 2026\n");
 
 //    while(1) {}
 
+    // Initialize eMMC before entering command loop
+    emmc_init();
+
     printf("Entering command loop\n");
     char buffer[0x200]={0xff};
     send_dword(0xB1B2B3B4);
 
     while (1) {
-        printf("Waiting for cmd\n");
+        //printf("Waiting for cmd\n");
         memset(buf, 0, sizeof(buf));    
         uint32_t magic = recv_dword();
         if (magic != 0xf00dd00d) {
@@ -80,39 +84,57 @@ int main() {
             break;
         }
         uint32_t cmd = recv_dword();
-    printf("cmd 0x%s\n", u32_to_str(cmd));
+    //printf("cmd 0x%s\n", u32_to_str(cmd));
     switch (cmd) {
         case 0x1000: {
-            uint32_t block = recv_dword();
-            printf("Read sector 0x%s\n", u32_to_str(block));
-            memset(buf, 0, sizeof(buf));
-            if (emmc_read_sector(current_partition, block, (uint32_t*)buf) != 0) {
-                printf("Read error!\n");
-            } else {
-                usbdl_put_data(buf, sizeof(buf));
-            }
-            break;
+             emmc_init();
+             send_dword(0xD1D1D1D1);
+             break;
         }
         case 0x1001: {
+            uint32_t region = recv_dword();
             uint32_t block = recv_dword();
-            printf("Write sector 0x%s\n", u32_to_str(block));
+            //printf("Read region 0x%s sector 0x%s\n", u32_to_str(region), u32_to_str(block));
             memset(buf, 0, sizeof(buf));
-            usbdl_get_data(buf, 0x200, 0);
-            if (emmc_write_sector(current_partition, block, (uint32_t*)buf) != 0) {
-                printf("Write error!\n");
+            if (emmc_read_sector(region, block, (uint32_t*)buf) != 0) {
+                printf("Read error!\n");
             } else {
-                printf("OK\n");
-                send_dword(0xD0D0D0D0);
+                //printf("Read succeeded, sending data...\n");
+                for (int i = 0; i < 0x200; i += USBDL_CHUNK_SIZE) {
+                    usbdl_put_data(&buf[i], USBDL_CHUNK_SIZE);
+                }
             }
             break;
         }
         case 0x1002: {
-            uint32_t part = recv_dword();
-            printf("Switch to partition %d => ", part);
-            ret = emmc_switch_partition(part);
-            printf("result 0x%s\n", u32_to_str(ret));
-            if (ret == 0) current_partition = part;
-            mdelay(500); // just in case
+            uint32_t region = recv_dword();
+            uint32_t block = recv_dword();
+            //printf("Write region 0x%s sector 0x%s\n", u32_to_str(region), u32_to_str(block));
+            memset(buf, 0, sizeof(buf));
+            usbdl_get_data(buf, 0x200, 0);
+            if (emmc_write_sector(region, block, (uint32_t*)buf) != 0) {
+                printf("Write error!\n");
+            } else {
+                //printf("OK\n");
+                send_dword(0xD0D0D0D0);
+            }
+            break;
+        }
+        case 0x1003: {
+            // Dump EXT_CSD register
+            printf("Dumping EXT_CSD\n");
+            uint8_t ext_csd[512];
+            memset(ext_csd, 0, sizeof(ext_csd));
+
+            if (emmc_read_ext_csd(ext_csd) != 0) {
+                printf("EXT_CSD read failed!\n");
+                // Still send data even on error (all zeros)
+            }
+
+            printf("Read succeeded, sending data...\n");
+            for (int i = 0; i < 0x200; i += USBDL_CHUNK_SIZE) {
+                usbdl_put_data(&ext_csd[i], USBDL_CHUNK_SIZE);
+            }
             break;
         }
         case 0x3000: {
@@ -176,11 +198,6 @@ int main() {
             apmcu_disable_smp();
             send_dword(0xD0D0D0D0);
             break;
-        }
-        case 0x6000: {
-             emmc_init();
-             send_dword(0xD1D1D1D1);
-             break;
         }
         case 0x7000: { 
             emmc_boot0_verify_test();            

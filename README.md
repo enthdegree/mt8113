@@ -7,14 +7,20 @@ Needless to say, at this stage everything in this repo is dangerous.
 
 ## Status
 
-We have observed successful PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from BROM Download Mode. 
-Routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
-Some small tests that print status to UART succeed:
+We have an extremely basic prototype DA [`mt8113_reflash.py`](./mt8113_reflash.py) that does PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from BROM Download Mode. Features:
+
+ - Parse eMMC userdata GPT table
+ - Dump eMMC EXT_CSD register
+ - Very slow partition dump at 70 kbps
+ - Untested eMMC write interface
+
+ Only 70 kbps = it has transport issues that need to be solved before it is practical. Routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
+
+Some small tests that print status to UART succeed (see below):
 
  - `emmc_boot0_verify_test`: read + dump the first two sectors of the eMMC's `boot0` region and look for the expected magic strings.
  - `emmc_roundtrip_test`: read, overwrite and then revert some sector in the `userdata` region. (Dangerous!)
 
-See below for how to trigger these tests.
 I'm only testing on a Kobo Clara BW right now but in principle most MT8113-based Kobos should work too.
 This requires more dangerous testing.
 

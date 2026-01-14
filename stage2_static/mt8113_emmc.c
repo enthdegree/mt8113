@@ -127,6 +127,19 @@ int msdc_wait_int(uint32_t mask, uint32_t timeout_val) {
     return -1;
 }
 
+void msdc_drain_rxdata_fifo(void) { 
+        msdc_clear_fifo();
+        uint32_t fifocs = msdc[MSDC_FIFOCS];
+        uint32_t rx_count = fifocs & 0xFF;
+        if (rx_count != 0) {
+            // Drain it
+            while ((msdc[MSDC_FIFOCS] & 0xFF) > 0) {
+                (void)msdc[MSDC_RXDATA];
+            }
+        }
+        msdc[MSDC_INT] = 0xFFFFFFFF; // Clear interrupts
+}
+
 int msdc_send_cmd(uint8_t cmd_idx, uint32_t arg, uint32_t flags) {
     msdc_wait_cmd_ready();
     msdc[MSDC_INT] = 0xFFFFFFFF;
@@ -306,19 +319,7 @@ int emmc_read_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer) 
     // First read after partition switch or write returns stale data.
     // Do every read twice and discard the first result.
     for (int attempt = 0; attempt < 2; attempt++) {
-        // Clear FIFO and check it's empty
-        msdc_clear_fifo();
-        uint32_t fifocs = msdc[MSDC_FIFOCS];
-        uint32_t rx_count = fifocs & 0xFF;
-        if (rx_count != 0) {
-            // Drain it
-            while ((msdc[MSDC_FIFOCS] & 0xFF) > 0) {
-                (void)msdc[MSDC_RXDATA];
-            }
-        }
-        
-        // Clear any pending interrupts
-        msdc[MSDC_INT] = 0xFFFFFFFF;
+        msdc_drain_rxdata_fifo();
 
         // CMD17 - READ_SINGLE_BLOCK
         if (msdc_send_cmd(17, sector_num, CMD_R1_RESP | CMD_SINGLE_BLK | CMD_BLKLEN(512)) != 0) {
@@ -348,20 +349,20 @@ int emmc_read_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer) 
         
         uint32_t int_status = msdc[MSDC_INT];
         msdc[MSDC_INT] = int_status;
-        
+
         if ((int_status & (INT_DATCRCERR | INT_DATTMO)) || words_read < 128) {
             printf("Read error\n");
             printf("INT 0x%s\n", u32_to_str(int_status));
             printf("words_read 0x%s\n", u32_to_str(words_read));
             return -1;
         }
-        
+
         // Wait for card ready before next attempt or return
         if (msdc_wait_card_ready() != 0) {
             printf("Card not ready after read\n");
             return -1;
         }
-        
+
         // First iteration is dummy read, discard and read again
     }
     
@@ -458,6 +459,71 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
     }
     
     printf("Write OK\n");
+    return 0;
+}
+
+int emmc_read_ext_csd(uint8_t *buffer) {
+    uint32_t *buf32 = (uint32_t*)buffer;
+
+    // Ensure card is ready before issuing read command
+    if (msdc_wait_card_ready() != 0) {
+        printf("Card not ready for EXT_CSD read\n");
+        return -1;
+    }
+
+    // First read after partition switch or write returns stale data.
+    // Do every read twice and discard the first result.
+    for (int attempt = 0; attempt < 2; attempt++) {
+        msdc_drain_rxdata_fifo();
+
+        // CMD8 - SEND_EXT_CSD
+        if (msdc_send_cmd(8, 0, CMD_R1_RESP | CMD_SINGLE_BLK | CMD_BLKLEN(512)) != 0) {
+            printf("CMD8 failed\n");
+            return -1;
+        }
+
+        // Wait for data to start arriving
+        uint32_t timeout_val = 100000;
+        while (timeout_val-- > 0) {
+            if ((msdc[MSDC_FIFOCS] & 0xFF) > 0) break;
+            if (msdc[MSDC_INT] & INT_DATA_BITS) break;
+        }
+
+        // Read 128 words (512 bytes) from FIFO
+        int words_read = 0;
+        timeout_val = 100000;
+
+        while (timeout_val-- > 0 && words_read < 128) {
+            uint32_t fifo_count = msdc[MSDC_FIFOCS] & 0xFF;
+            while (fifo_count >= 4 && words_read < 128) {
+                buf32[words_read++] = msdc[MSDC_RXDATA];
+                fifo_count = msdc[MSDC_FIFOCS] & 0xFF;
+            }
+            if (msdc[MSDC_INT] & INT_XFER_COMPL) break;
+        }
+
+        uint32_t int_status = msdc[MSDC_INT];
+        msdc[MSDC_INT] = int_status;
+
+        if ((int_status & (INT_DATCRCERR | INT_DATTMO)) || words_read < 128) {
+            printf("EXT_CSD read failed!\n");
+            return -1;
+        }
+
+        // Wait for card ready before next attempt or return
+        if (msdc_wait_card_ready() != 0) {
+            printf("Card not ready after EXT_CSD read\n");
+            return -1;
+        }
+
+        // First iteration is dummy read, discard and read again
+	    emmc_init();
+	    msdc[MSDC_CFG] |= 0xF;
+	    for (int retry = 5000; retry > 0; retry--) {
+		if ((msdc[MSDC_CFG] & 0x4) == 0) break;
+	    }
+     }
+
     return 0;
 }
 
