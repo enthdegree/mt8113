@@ -5,6 +5,9 @@ The goal is to allow recovery from bricks such as [mtkclient issue 1332](https:/
 The approach is to use bkerler/mtkclient's stage2_static as a platform. 
 Needless to say, at this stage everything in this repo is dangerous.
 
+I'm only testing on a Kobo Clara BW right now but in principle most MT8113-based Kobos should work too.
+This requires more dangerous testing.
+
 ## Status
 
 We have an extremely basic prototype DA client [`mt8113_reflash.py`](./mt8113_reflash.py). 
@@ -18,14 +21,11 @@ Features:
 
  Only 70 kbps = it has transport issues that need to be solved before it is practical. Routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
 
-Some small tests that print status to UART succeed (see below):
+## Tests
+
+Some small tests that print status to UART succeed:
  - `emmc_boot0_verify_test`: read + dump the first two sectors of the eMMC's `boot0` region and look for the expected magic strings.
  - `emmc_roundtrip_test`: read, overwrite and then revert some sector in the `userdata` region. (Dangerous!)
-
-I'm only testing on a Kobo Clara BW right now but in principle most MT8113-based Kobos should work too.
-This requires more dangerous testing.
-
-## Tests
 
 Connect the Kobo to a computer via USB and start mtkclient to try to upload the custom stage2:  
 
