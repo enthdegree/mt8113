@@ -19,6 +19,7 @@ int emmc_switch_partition(uint32_t partition);
 int emmc_read_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer);
 int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer);
 int emmc_read_ext_csd(uint8_t *buffer);
+int emmc_read_multi_sector(uint32_t partition, uint32_t start_sector, uint32_t num_sectors, uint8_t *buffer);
 void emmc_roundtrip_test(void);
 void emmc_boot0_verify_test(void); 
 
