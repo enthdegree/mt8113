@@ -6,26 +6,28 @@ The approach is to use bkerler/mtkclient's stage2_static as a platform.
 Needless to say, at this stage everything in this repo is dangerous.
 
 I'm only testing on a Kobo Clara BW right now but in principle most MT8113-based Kobos should work too.
-This requires more dangerous testing.
 
 ## Status
 
-We have an extremely basic prototype DA client [`mt8113_reflash.py`](./mt8113_reflash.py). 
-It does PIO eMMC read/write of 512-byte sectors with CMD17/CMD24 from BROM Download Mode. 
+We have an extremely basic prototype flash client [`mt8113_reflash.py`](./mt8113_reflash.py). 
+Onboard routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
 Features:
 
  - Parse eMMC userdata GPT table
  - Dump eMMC EXT_CSD register
- - Very slow read / partition dump at 70 kbps
- - Untested write
+ - Read at 70 kbps via 512 byte CMD17/READ_SINGLE_BLOCK 
+ - Write at 1 kbps via 512 byte CMD24/WRITE_SINGLE_BLOCK
 
- Only 70 kbps = it has transport issues that need to be solved before it is practical. Routines are in [`mt8113_emmc.c`](./stage2_static/mt8113_emmc.c). 
+It is so slow because there is a USB handshake for each block R/W.
+Obviously it should be buffering 100x and using CMD18/READ_MULTIPLE_BLOCK CMD25/WRITE_MULTIPLE_BLOCK.
 
 ## Tests
 
-Some small tests that print status to UART succeed:
- - `emmc_boot0_verify_test`: read + dump the first two sectors of the eMMC's `boot0` region and look for the expected magic strings.
- - `emmc_roundtrip_test`: read, overwrite and then revert some sector in the `userdata` region. (Dangerous!)
+Some small onboard tests that print status to UART:
+ - `emmc_boot0_verify_test()`: read + dump the first two sectors of the eMMC's `boot0` region and look for the expected magic strings.
+ - `emmc_roundtrip_test()`: read, overwrite and then revert some sector in the `userdata` region.
+
+There is also a client-level test `mt8113_reflash.py roundtrip-test`
 
 Connect the Kobo to a computer via USB and start mtkclient to try to upload the custom stage2:  
 

@@ -565,6 +565,114 @@ def write_partition(usb, label, input_file):
     print(f"Write complete: {sectors_written} sectors in {elapsed_total:.1f}s (avg {avg_speed:.2f} MB/s)")
 
 
+def generate_test_sector(sector_index):
+    """Generate a test sector with systematic pattern: 0x00C0FFEE ^ word_index"""
+    data = bytearray(512)
+    for i in range(128):  # 128 32-bit words per sector
+        word_index = sector_index * 128 + i
+        value = 0x00C0FFEE ^ word_index
+        # Little-endian 32-bit word
+        data[i*4:i*4+4] = pack("<I", value)
+    return bytes(data)
+
+
+def roundtrip_test(usb, region, start_sector, num_sectors, region_sizes):
+    """Perform roundtrip write/read test on specified sectors
+
+    1. Read original data (for restoration)
+    2. Write systematic test pattern
+    3. Read back and verify
+    4. Restore original data
+
+    Args:
+        usb: MT8113USB instance
+        region: Region name (boot0, boot1, userdata)
+        start_sector: Starting sector number
+        num_sectors: Number of sectors to test
+        region_sizes: Dict of region sizes from EXT_CSD
+    """
+    region_id = REGIONS[region]
+    max_sectors = region_sizes[region]
+
+    # Bounds checking
+    if start_sector >= max_sectors:
+        raise ValueError(f"Start sector {start_sector} exceeds region size {max_sectors} sectors")
+    if start_sector + num_sectors > max_sectors:
+        raise ValueError(f"Test range {start_sector}+{num_sectors} exceeds region size {max_sectors} sectors")
+
+    print(f"\n=== Roundtrip Test ===")
+    print(f"Region: {region} (id={region_id})")
+    print(f"Sectors: {start_sector} to {start_sector + num_sectors - 1} ({num_sectors} sectors)")
+    print(f"Test pattern: 0x00C0FFEE ^ word_index")
+
+    # Step 1: Read original data
+    print(f"\n[1/4] Reading original data...")
+    original_data = []
+    for i in range(num_sectors):
+        sector_num = start_sector + i
+        data = usb.read_sector(region_id, sector_num)
+        original_data.append(data)
+        print(f"  Read sector {sector_num} ({i+1}/{num_sectors})", end='\r')
+    print()
+
+    # Step 2: Write test pattern
+    print(f"\n[2/4] Writing test pattern...")
+    for i in range(num_sectors):
+        sector_num = start_sector + i
+        test_data = generate_test_sector(i)
+        success = usb.write_sector(region_id, sector_num, test_data)
+        if not success:
+            raise RuntimeError(f"Write failed at sector {sector_num}")
+        print(f"  Wrote sector {sector_num} ({i+1}/{num_sectors})", end='\r')
+    print()
+
+    # Step 3: Read back and verify
+    print(f"\n[3/4] Reading back and verifying...")
+    errors = []
+    for i in range(num_sectors):
+        sector_num = start_sector + i
+        readback = usb.read_sector(region_id, sector_num)
+        expected = generate_test_sector(i)
+
+        if readback != expected:
+            # Find first mismatch
+            for j in range(512):
+                if readback[j] != expected[j]:
+                    errors.append({
+                        'sector': sector_num,
+                        'offset': j,
+                        'expected': expected[j],
+                        'got': readback[j]
+                    })
+                    break
+        print(f"  Verified sector {sector_num} ({i+1}/{num_sectors})", end='\r')
+    print()
+
+    # Step 4: Restore original data
+    print(f"\n[4/4] Restoring original data...")
+    for i in range(num_sectors):
+        sector_num = start_sector + i
+        success = usb.write_sector(region_id, sector_num, original_data[i])
+        if not success:
+            raise RuntimeError(f"Restore failed at sector {sector_num}")
+        print(f"  Restored sector {sector_num} ({i+1}/{num_sectors})", end='\r')
+    print()
+
+    # Report results
+    print(f"\n=== Results ===")
+    if errors:
+        print(f"FAILED: {len(errors)} sector(s) had verification errors")
+        for err in errors[:5]:  # Show first 5 errors
+            print(f"  Sector {err['sector']} offset {err['offset']}: "
+                  f"expected 0x{err['expected']:02x}, got 0x{err['got']:02x}")
+        if len(errors) > 5:
+            print(f"  ... and {len(errors) - 5} more errors")
+        return False
+    else:
+        print(f"PASSED: All {num_sectors} sectors verified successfully")
+        return True
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='MT8113 eMMC Reflash Tool - Read and write eMMC sectors',
@@ -624,6 +732,11 @@ def main():
     write_parser.add_argument('--input', required=True,
                              help='Input filename')
 
+    # Roundtrip test command - tests end of boot1 (safe, boot1 is typically empty)
+    # boot1 is 4MB = 8192 sectors, test 100 sectors starting at 8000
+    subparsers.add_parser('roundtrip-test',
+                          help='Write/read/verify roundtrip test (uses end of boot1)')
+
     args = parser.parse_args()
 
     try:
@@ -668,6 +781,15 @@ def main():
             # Perform write operation
             write_flash(usb, args.region, args.start, args.input,
                        region_sizes)
+
+        elif args.command == 'roundtrip-test':
+            # Get region sizes first
+            info = get_and_save_ext_csd(usb, 'ext_csd.bin')
+            region_sizes = info['regions']
+
+            # Perform roundtrip test on end of boot1 (safe area)
+            success = roundtrip_test(usb, 'boot1', 8000, 100, region_sizes)
+            sys.exit(0 if success else 1)
 
     except KeyboardInterrupt:
         print("\n\nOperation cancelled by user")

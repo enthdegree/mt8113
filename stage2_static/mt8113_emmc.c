@@ -384,7 +384,7 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
     // Set block count to 1
     msdc[SDC_BLK_NUM] = 1;
 
-    printf("Write sector 0x%s\n", u32_to_str(sector_num));
+    //printf("Write sector 0x%s\n", u32_to_str(sector_num));
 
     // CMD24 - WRITE_SINGLE_BLOCK
     msdc_wait_cmd_ready();
@@ -397,8 +397,8 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
         return -1;
     }
 
-    printf("CMD24 RESP0 0x%s\n", u32_to_str(msdc[SDC_RESP0]));
-    printf("CMD24 INT 0x%s\n", u32_to_str(msdc[MSDC_INT]));
+    //printf("CMD24 RESP0 0x%s\n", u32_to_str(msdc[SDC_RESP0]));
+    //printf("CMD24 INT 0x%s\n", u32_to_str(msdc[MSDC_INT]));
 
     // Check card accepted write command
     if (msdc[SDC_RESP0] & 0xFDF90008) {
@@ -422,7 +422,7 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
         }
     }
     
-    printf("Words written 0x%s\n", u32_to_str(words_written));
+    //printf("Words written 0x%s\n", u32_to_str(words_written));
 
     if (words_written < 128) {
         printf("Write FIFO timeout\n");
@@ -458,7 +458,7 @@ int emmc_write_sector(uint32_t partition, uint32_t sector_num, uint32_t *buffer)
         return -1;
     }
     
-    printf("Write OK\n");
+    //printf("Write OK\n");
     return 0;
 }
 
