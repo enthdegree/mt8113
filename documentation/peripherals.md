@@ -9,7 +9,7 @@ Bytes above that address are read by various callers and determine policy/config
 ## The MT8113 BROM's eMMC access
 
 The MT8113 MSDC (Memory stick and Secure Digital card Controller) has registers mapped to 0x11230000.
-During a normal boot, the BROM sets up the eMMC is in boot-up mode reads boot0's contents in 512-byte blocks.
+Early during a normal boot, the BROM sets up the eMMC in boot-up mode and reads boot0's contents in 512-byte blocks.
 By the time the BROM jumps to either preloader (Little Kernel) or the BROM Download agent, the content of boot0 appears starting at some place past around 0x00100040. 
 Under normal boot circumstances, it is Little Kernel that brings the eMMC out of Download mode and reads the next bootloader. 
 Little Kernel's setup routines are mimicked by [`mt8113_emmc.c`](../stage2_static/mt8113_emmc.c).
