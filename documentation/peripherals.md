@@ -13,7 +13,7 @@ Early during a normal boot, the BROM sets up the eMMC in boot-up mode and reads 
 By the time the BROM jumps to either preloader (Little Kernel) or the BROM Download agent, the content of boot0 appears starting at some place past around 0x00100040. 
 Under normal boot circumstances, it is Little Kernel that brings the eMMC out of Download mode and reads the next bootloader from it. 
 
-Little Kernel's setup routines are successfully mimicked by [`mt8113_emmc.c`](../stage2_static/mt8113_emmc.c).
+Little Kernel's eMMC setup routine is successfully mimicked by [`mt8113_emmc.c`](../stage2_static/mt8113_emmc.c).
 
 The eMMC is unresponsive to mtkclient stage2's MSDC/eMMC driver, "`mt_sd`".
 I don't know what exactly is going wrong.
