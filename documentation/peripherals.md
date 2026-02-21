@@ -15,7 +15,7 @@ Under normal boot circumstances, it is Little Kernel that brings the eMMC out of
 
 Little Kernel's eMMC setup routine is successfully mimicked by [`mt8113_emmc.c`](../stage2_static/mt8113_emmc.c).
 
-The eMMC is unresponsive to mtkclient stage2's MSDC/eMMC driver, "`mt_sd`".
+The eMMC is unresponsive to mtkclient stage2's usual MSDC/eMMC driver, "`mt_sd`".
 I don't know what exactly is going wrong.
 It is likely because the eMMC has been left in boot-up mode by the time mtkclient's stage2 executes.
 Boot-up mode and other eMMC configs are configured by the eMMC's EXT_CSD registers and those registers persist with power-cycle.
