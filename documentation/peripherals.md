@@ -9,16 +9,12 @@ Bytes above that address are read by various callers and determine policy/config
 ## The MT8113 BROM's eMMC access
 
 The MT8113 MSDC (Memory stick and Secure Digital card Controller) has registers mapped to 0x11230000.
-By the time mtkclient's stage2 executes from BROM download mode, the BROM has already had MSDC start the eMMC in boot-up mode and read boot0's contents in 512-byte blocks.
-The eMMC is unresponsive to mtkclient's `mt_sd` driver. 
-The eMMC is probably ignoring all its init routines because it's in boot-up mode. I don't know what exactly is going wrong.
+During a normal boot, the BROM sets up the eMMC is in boot-up mode reads boot0's contents in 512-byte blocks.
+By the time the BROM jumps to either preloader (Little Kernel) or the BROM Download agent, the content of boot0 appears starting at some place past around 0x00100040. 
+Under normal boot circumstances, it is Little Kernel that brings the eMMC out of Download mode and reads the next bootloader. 
+Little Kernel's setup routines are mimicked by [`mt8113_emmc.c`](../stage2_static/mt8113_emmc.c).
 
-At stage2 runtime:
-
-- A software-level stream cursor at register 0x00102aec holds the u32 value 0x0003e400, the length of the boot0 partition's data contents. That likely came from the header.
-- Content of boot0 appear starting at some places past around 0x00100040 and stage2 partially overwrites it.
-- Calling the BROM's eMMC stream-advance routine returns 0x35 / timeout.
-- The EMMC_STS register is all 0s. Calling some BROM routines to start the eMMC in boot-up mode brings the "eMMC bootup state" bit in EMMC_STS up to 1, but it's likely MSDC is just asserting that without any eMMC participation. 
-
-Under normal boot circumstances, the next actor that brings the eMMC out of this state is the Little Kernel preloader in boot0. 
-Its setup is what the (working) routines in [`mt8113_emmc.c`](../stage2_static/mt8113_emmc.c) mimick.
+The eMMC is unresponsive to mtkclient stage2's MSDC/eMMC driver, "`mt_sd`".
+I don't know what exactly is going wrong.
+It is likely because the eMMC has been left in boot-up mode by the time mtkclient's stage2 executes.
+Boot-up mode and other eMMC configs are configured by the eMMC's EXT_CSD registers and those registers persist with power-cycle.
