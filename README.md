@@ -28,7 +28,7 @@ Connect the Kobo to a computer via USB and start mtkclient to try to upload the 
 ```
 python3 mtk.py stage --stage2 path/to/custom/stage2.bin
 ```
-In this state it will begin looking on USB for the MediaTek bootloader in download mode. 
+In this state it will begin looking on USB for a MediaTek device in BROM download mode. 
 To put the Kobo in download mode, hold the Download pads shorted, then tap & release a short on the Reset pads. 
 After 3 seconds or so, release the short on the Download pads. 
 This is easy to do with two bits of aluminum foil. 
